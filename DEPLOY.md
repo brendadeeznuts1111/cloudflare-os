@@ -23,6 +23,8 @@ This checkout is **not** ready for `pnpm deploy`. Production deploy is blocked u
 
 This environment also has no `wrangler login` session. Do not run `pnpm deploy` until both of those are true.
 
+Two large generated files were not uploaded through the GitHub contents API (`pnpm-lock.yaml` and `packages/custom-gatekeeper/worker-configuration.d.ts`). After clone, run `bash scripts/sync-upstream-generated.sh` to copy them from the official starter, or let `pnpm install` resolve a new lockfile and `wrangler types` regenerate the Worker types.
+
 ## Cloudflare account requirements
 
 The account needs:
