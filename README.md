@@ -45,6 +45,7 @@ There is no `developers.cloudflare.com/cloudflare-os` product doc yet. Use these
 | Announcement | https://blog.cloudflare.com/cloudflare-os/ |
 | Core (do not patch) | https://github.com/cloudflare/cloudflare-os |
 | Official starter (this repo is seeded from) | https://github.com/cloudflare/cloudflare-os-starter |
+| How this deployment is built | [docs/architecture.md](docs/architecture.md) |
 | Starter customization | [docs/customization.md](docs/customization.md) |
 | Observability | [docs/observability.md](docs/observability.md) |
 | Migrate from hosted deploy | [docs/migrate-from-hosted.md](docs/migrate-from-hosted.md) |
