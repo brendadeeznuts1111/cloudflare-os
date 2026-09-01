@@ -43,18 +43,31 @@ A Gatekeeper is not an MCP server with ambient tools. Agents start with no acces
 
 ## This wrapper's Gatekeeper
 
-`packages/custom-gatekeeper` is the company-context capability for Brenda OS. It is auto-provisioned (no OAuth) and read-only.
+`packages/custom-gatekeeper` is the company-context capability for Brenda OS. It is auto-provisioned (no OAuth). It is no longer read-only: operator notes use the official write path.
 
 An agent bound to it can call:
 
 - `getDeploymentInfo()` — name and guidance from `deployment.jsonc`
 - `getTopology()` — Worker names, pinned core SHA, remaining deploy blockers
 - `listOfficialDocs()` — official Cloudflare OS and platform docs
-- `listSkills()` / `getSkill(id)` — curated operating skills (`run-local`, `fill-deploy-config`, `upgrade-core`, `extend-this-gatekeeper`)
+- `listSkills()` / `getSkill(id)` — curated operating skills (`run-local`, `fill-deploy-config`, `upgrade-core`, `extend-this-gatekeeper`, `file-operator-note`)
+- `listGlossary()` / `getGlossaryEntry(term)` — Cloudflare OS vocabulary
+- `listEstate()` / `getEstateWorker(name)` — existing Worker inventory (no account IDs)
+- `fileOperatorNote(title, body)` / `listOperatorNotes()` / `getOperatorNote(id)` — durable notes
 
-Every method records an observation before returning data. That is the same pattern a GitHub or Google Gatekeeper uses for reads.
+Every read records an observation before returning data. That is the same pattern a GitHub or Google Gatekeeper uses for reads.
 
-To add a real organization API (issues, CRM, warehouse), keep the Worker in `packages/`, follow [`packages/custom-gatekeeper/README.md`](../packages/custom-gatekeeper/README.md), and load the upstream [`write-gatekeeper` skill](https://github.com/cloudflare/cloudflare-os/blob/main/.agents/skills/write-gatekeeper/SKILL.md).
+Writes call `submitAction(actionId, { title, description, implementsRevert: true })` with a sequential integer ID, then queue a pending record. `listOperatorNotes()` merges pending over applied and never returns status. The Durable Object applies, rejects, or reverts only in `applyAction` / `rejectAction` / `revertAction`. If `submitAction` fails, the pending record is dropped.
+
+This catalog is wrapper-owned and parallel to the official Context Gatekeeper (`brenda-os-context`), which stores git-backed `SKILL.md` collections. Do not replace Context with these company skills.
+
+Workshop extras:
+
+- `getAgentCatalog()` — skills first, then glossary, then estate, passed through `boundAgentCatalog()`
+- `getSlashCommandProvider()` — `/run-local` and the other company skills expand after an observation
+- `describe().hasSlashCommands = true`
+
+To add a real organization API (issues, CRM, warehouse), keep the Worker in `packages/`, follow [`packages/custom-gatekeeper/README.md`](../packages/custom-gatekeeper/README.md), and load the upstream [`write-gatekeeper` skill](https://github.com/cloudflare/cloudflare-os/blob/main/.agents/skills/write-gatekeeper/SKILL.md). Design `types.d.ts` and stop for review before adding a new external-service Gatekeeper.
 
 ## What deploy creates
 
