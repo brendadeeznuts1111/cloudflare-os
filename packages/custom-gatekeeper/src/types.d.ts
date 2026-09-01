@@ -39,6 +39,27 @@ export interface CompanySkill {
   steps: string[];
 }
 
+/** A Brenda OS term and its meaning. */
+export interface GlossaryEntry {
+  term: string;
+  meaning: string;
+}
+
+/** An existing Cloudflare Worker this operator already runs, outside the Brenda OS deploy set. */
+export interface EstateWorker {
+  name: string;
+  role: string;
+  notes: string;
+}
+
+/** A durable operator note filed through this Session. */
+export interface OperatorNote {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
 /** Capability provided to the CloudflareOS agent for this deployment. */
 export interface CustomSession {
   /**
@@ -65,4 +86,40 @@ export interface CustomSession {
    * Returns one skill's full instructions, or null if the id is unknown.
    */
   getSkill(id: string): Promise<CompanySkill | null>;
+
+  /**
+   * Lists Brenda OS glossary terms. Use getGlossaryEntry(term) for one definition.
+   */
+  listGlossary(): Promise<GlossaryEntry[]>;
+
+  /**
+   * Returns one glossary entry, matching term case-insensitively, or null if unknown.
+   */
+  getGlossaryEntry(term: string): Promise<GlossaryEntry | null>;
+
+  /**
+   * Lists existing Cloudflare Workers this operator already runs (names and roles only).
+   */
+  listEstate(): Promise<EstateWorker[]>;
+
+  /**
+   * Returns one estate Worker by exact name, or null if unknown.
+   */
+  getEstateWorker(name: string): Promise<EstateWorker | null>;
+
+  /**
+   * Files an operator note and returns it. The note is visible immediately via listOperatorNotes()
+   * and getOperatorNote(id).
+   */
+  fileOperatorNote(title: string, body: string): Promise<OperatorNote>;
+
+  /**
+   * Lists operator notes, newest first.
+   */
+  listOperatorNotes(): Promise<OperatorNote[]>;
+
+  /**
+   * Returns one operator note by id, or null if unknown.
+   */
+  getOperatorNote(id: string): Promise<OperatorNote | null>;
 }
