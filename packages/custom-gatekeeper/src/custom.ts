@@ -7,27 +7,54 @@ import {
 import { skipRpcValidation, validateRpc } from "capnweb-validate";
 import type {
   AccountDescription,
+  ActionDescription,
+  AgentCatalog,
   ApprovalQueue,
   Gatekeeper,
   GatekeeperConnectCallback,
   GatekeeperConnectOptions,
   GatekeeperUser,
   GatekeeperUserVerifier,
+  ObservationAuthorizer,
   ResourceConfiguratorFrame,
   ResourceDescription,
+  SlashCommandDescriptor,
+  SlashCommandProvider,
+  SlashCommandResult,
   SupportedResource,
   VendorDescription,
 } from "@gadgets/workshop-shared/gatekeeper";
-import type { CompanySkill, CustomDeploymentInfo, CustomSession, DeploymentTopology, OfficialDoc } from "./types.js";
+import { boundAgentCatalog } from "@gadgets/workshop-shared/gatekeeper";
+import type {
+  CompanySkill,
+  CustomDeploymentInfo,
+  CustomSession,
+  DeploymentTopology,
+  EstateWorker,
+  GlossaryEntry,
+  OfficialDoc,
+  OperatorNote,
+} from "./types.js";
 import TYPES_CODE from "./types-code.js";
 import {
   DEPLOY_BLOCKERS,
   OFFICIAL_DOCS,
   PINNED_CORE_SHA,
+  SKILLS,
   WORKERS,
+  buildCompanyCatalogEntries,
+  getEstateWorker,
+  getGlossaryEntry,
   getSkillById,
+  listEstateWorkers,
+  listGlossaryEntries,
   listSkillSummaries,
 } from "./company-os.js";
+import {
+  NoteLedger,
+  newOperatorNote,
+  storageFromDurableObjectState,
+} from "./notes.js";
 
 const CUSTOM_ICON = {
   url:
@@ -37,7 +64,7 @@ const CUSTOM_ICON = {
     ),
 };
 
-type ObservationQueue = Pick<ApprovalQueue, "authorizeObservation"> &
+type SessionQueue = Pick<ApprovalQueue, "authorizeObservation" | "submitAction"> &
   Partial<{ [Symbol.dispose](): void }>;
 
 export function describeCustomVendor(): VendorDescription {
@@ -48,7 +75,7 @@ export function describeCustomVendor(): VendorDescription {
     color: "#e8f2ff",
     tagline: "Personal Cloudflare OS deployment",
     description:
-      "Example Gatekeeper for the brendadeeznuts1111 Cloudflare OS instance. Replace this with your organization's systems.",
+      "Company-context Gatekeeper for the brendadeeznuts1111 Cloudflare OS instance. Topology, glossary, estate inventory, and operator notes.",
     autoProvisionsAccount: true,
     providesAuth: false,
   };
@@ -64,13 +91,15 @@ export function describeCustomAccount(): AccountDescription {
 
 @validateRpc()
 export class CustomSessionImpl extends RpcTarget implements CustomSession {
-  readonly #approvalQueue: ObservationQueue;
+  readonly #approvalQueue: SessionQueue;
   readonly #info: CustomDeploymentInfo;
+  readonly #ledger: NoteLedger;
 
-  constructor(approvalQueue: ObservationQueue, info: CustomDeploymentInfo) {
+  constructor(approvalQueue: SessionQueue, info: CustomDeploymentInfo, ledger: NoteLedger) {
     super();
     this.#approvalQueue = approvalQueue;
     this.#info = info;
+    this.#ledger = ledger;
   }
 
   async getDeploymentInfo(): Promise<CustomDeploymentInfo> {
@@ -121,20 +150,148 @@ export class CustomSessionImpl extends RpcTarget implements CustomSession {
     return skill ? { ...skill, steps: [...skill.steps] } : null;
   }
 
+  async listGlossary(): Promise<GlossaryEntry[]> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "List Brenda OS glossary",
+      description: "Read curated Cloudflare OS terms for this deployment.",
+    });
+    return listGlossaryEntries();
+  }
+
+  async getGlossaryEntry(term: string): Promise<GlossaryEntry | null> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read glossary entry",
+      description: `Read the glossary entry "${term}".`,
+    });
+    const entry = getGlossaryEntry(term);
+    return entry ? { ...entry } : null;
+  }
+
+  async listEstate(): Promise<EstateWorker[]> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "List existing Worker estate",
+      description: "Read names and roles of Workers this operator already runs.",
+    });
+    return listEstateWorkers();
+  }
+
+  async getEstateWorker(name: string): Promise<EstateWorker | null> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read estate Worker",
+      description: `Read the estate inventory entry "${name}".`,
+    });
+    const worker = getEstateWorker(name);
+    return worker ? { ...worker } : null;
+  }
+
+  async fileOperatorNote(title: string, body: string): Promise<OperatorNote> {
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+    if (!trimmedTitle) {
+      throw new Error("Operator note title is required.");
+    }
+    if (!trimmedBody) {
+      throw new Error("Operator note body is required.");
+    }
+
+    const actionId = await this.#ledger.nextActionId();
+    const note = newOperatorNote(trimmedTitle, trimmedBody);
+    await this.#ledger.queuePending(actionId, note);
+
+    const description: ActionDescription = {
+      title: `File operator note: ${trimmedTitle}`,
+      description: trimmedBody,
+      implementsRevert: true,
+    };
+
+    try {
+      await this.#approvalQueue.submitAction(actionId, description);
+    } catch (error) {
+      await this.#ledger.reject(actionId);
+      throw error;
+    }
+
+    return { ...note };
+  }
+
+  async listOperatorNotes(): Promise<OperatorNote[]> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "List operator notes",
+      description: "Read operator notes filed through this Gatekeeper.",
+    });
+    return this.#ledger.list();
+  }
+
+  async getOperatorNote(id: string): Promise<OperatorNote | null> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read operator note",
+      description: `Read the operator note "${id}".`,
+    });
+    return this.#ledger.get(id);
+  }
+
   [Symbol.dispose](): void {
     this.#approvalQueue[Symbol.dispose]?.();
   }
 }
 
+export async function invokeCompanySkillCommand(
+  id: string,
+  args: string,
+  authorizer: Pick<ObservationAuthorizer, "authorizeObservation">,
+): Promise<SlashCommandResult> {
+  const skill = getSkillById(id);
+  if (!skill) {
+    throw new Error(`Unknown company skill command: ${id}`);
+  }
+  await authorizer.authorizeObservation({
+    title: `Expand /${skill.id}`,
+    description: `Read the operating skill "${skill.id}".`,
+  });
+  const steps = skill.steps.join("\n");
+  const trimmed = args.trim();
+  return {
+    skillName: skill.title,
+    message: trimmed ? `${steps}\n\nArguments: ${trimmed}` : steps,
+  };
+}
+
+@validateRpc()
+export class CustomSlashCommandProvider extends RpcTarget implements SlashCommandProvider {
+  list(): Promise<SlashCommandDescriptor[]> {
+    return Promise.resolve(
+      SKILLS.map((skill) => ({
+        id: skill.id,
+        name: skill.id,
+        description: skill.summary,
+      })),
+    );
+  }
+
+  invoke(
+    id: string,
+    args: string,
+    authorizer: RpcStub<ObservationAuthorizer>,
+  ): Promise<SlashCommandResult> {
+    return invokeCompanySkillCommand(id, args, authorizer);
+  }
+}
+
 @validateRpc()
 export class CustomGatekeeper extends DurableObject<Cloudflare.Env> implements Gatekeeper<CustomSession> {
+  #ledger(): NoteLedger {
+    return new NoteLedger(storageFromDurableObjectState(this.ctx));
+  }
+
   async describe(): Promise<ResourceDescription> {
     return {
       url: "custom://deployment-info",
       title: "Deployment information",
-      snippet: "Brenda OS topology, official docs, and operating skills for this deployment.",
+      snippet:
+        "Brenda OS topology, glossary, estate inventory, operator notes, and operating skills.",
       suggestedBindingName: "CUSTOM",
       tsType: "CustomSession",
+      hasSlashCommands: true,
     };
   }
 
@@ -147,23 +304,42 @@ export class CustomGatekeeper extends DurableObject<Cloudflare.Env> implements G
   }
 
   async startSession(approvalQueue: RpcStub<ApprovalQueue>): Promise<CustomSession> {
-    return new CustomSessionImpl(approvalQueue.dup(), {
-      name: this.env.CUSTOM_NAME,
-      message: this.env.CUSTOM_MESSAGE,
+    return new CustomSessionImpl(
+      approvalQueue.dup(),
+      {
+        name: this.env.CUSTOM_NAME,
+        message: this.env.CUSTOM_MESSAGE,
+      },
+      this.#ledger(),
+    );
+  }
+
+  async getAgentCatalog(authorizer: RpcStub<ObservationAuthorizer>): Promise<AgentCatalog> {
+    const entries = buildCompanyCatalogEntries();
+    await authorizer.authorizeObservation({
+      title: "Company catalog",
+      description: `Listed ${entries.length} Brenda OS catalog item(s).`,
     });
+    return boundAgentCatalog(entries);
+  }
+
+  async getSlashCommandProvider(): Promise<CustomSlashCommandProvider> {
+    return new CustomSlashCommandProvider();
   }
 
   async addObserver(_id: string, _user: Fetcher<GatekeeperUserVerifier>): Promise<void> {}
   async removeObserver(_id: string): Promise<void> {}
 
   async applyAction(action: number): Promise<void> {
-    throw new Error(`Custom Gatekeeper has no actions (${action}).`);
+    await this.#ledger().apply(action);
   }
 
-  async rejectAction(_action: number): Promise<void> {}
+  async rejectAction(action: number): Promise<void> {
+    await this.#ledger().reject(action);
+  }
 
-  async revertAction(_action: number): Promise<void> {
-    throw new Error("Custom Gatekeeper has no actions to revert.");
+  async revertAction(action: number): Promise<void> {
+    await this.#ledger().revert(action);
   }
 }
 
