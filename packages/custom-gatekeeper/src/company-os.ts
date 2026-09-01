@@ -26,7 +26,7 @@ export const WORKERS = [
   {
     bindingRole: "customGatekeeper",
     workerName: "brenda-os-custom-gk",
-    role: "This Worker. Company context, topology, docs, and operating skills.",
+    role: "This Worker. Company context, topology, docs, skills, estate inventory, and operator notes.",
   },
   {
     bindingRole: "errorReporter",
@@ -89,6 +89,7 @@ export const SKILLS = [
       "Set access.issuer, access.audience, and access.admins",
       "Run pnpm exec wrangler login, then pnpm check, then pnpm deploy",
       "Open /admin and set site name, logo, accent, and connector policy",
+      "Do not guess an account ID from other public Workers or repositories",
     ],
   },
   {
@@ -113,13 +114,101 @@ export const SKILLS = [
       "Mirror the same text in src/types-code.ts — that string is what agents see",
       "Authorize every read with authorizeObservation before returning data",
       "Submit writes with submitAction and apply them only in applyAction",
+      "Never mention the write pipeline in Session JSDoc — simulation keeps it invisible",
       "Never put secrets in wrangler.jsonc or deployment.jsonc",
       "Read packages/custom-gatekeeper/README.md and the upstream write-gatekeeper skill",
     ],
   },
+  {
+    id: "file-operator-note",
+    title: "File an operator note",
+    summary: "Write a durable note through the custom Session and read it back immediately.",
+    steps: [
+      "Call fileOperatorNote(title, body) on the custom Session",
+      "List notes with listOperatorNotes() — the new note is visible immediately",
+      "Read one note with getOperatorNote(id) using the id from the file or list result",
+    ],
+  },
+] as const;
+
+export const GLOSSARY = [
+  {
+    term: "Cloudflare OS",
+    meaning:
+      "Open-source AI workspace (not a replacement OS). Agents work through Gatekeepers; code and data live in Gadgets.",
+  },
+  {
+    term: "Gadget",
+    meaning:
+      "A sandboxed workspace: a Dynamic Worker plus a Durable Object Facet with SQLite. Isolated per user.",
+  },
+  {
+    term: "Gatekeeper",
+    meaning:
+      "A capability driver. Reads are observed. Writes become visible immediately on the Session; a human may later revert them.",
+  },
+  {
+    term: "Facet",
+    meaning:
+      "A named Durable Object binding on the Overseer (`gadget`, `gadget${id}`, `gatekeeper${id}`) so many DO classes share one Worker.",
+  },
+  {
+    term: "Context Gatekeeper",
+    meaning:
+      "Official kernel Gatekeeper that stores git-backed SKILL.md collections. Distinct from this wrapper-owned custom Gatekeeper.",
+  },
+  {
+    term: "Custom Gatekeeper",
+    meaning:
+      "This Worker (packages/custom-gatekeeper). Company topology, glossary, estate inventory, and operator notes. No OAuth.",
+  },
+  {
+    term: "deployment.jsonc",
+    meaning:
+      "Wrapper trust-and-infra config: account, routes, Access, Worker names, custom Gatekeeper branding. Prefer this over forking core.",
+  },
+] as const;
+
+/**
+ * Existing Cloudflare Workers this operator already runs.
+ * Names only — no account IDs, tokens, or hostnames that would leak tenancy.
+ */
+export const ESTATE = [
+  {
+    name: "bookdeskops",
+    role: "production",
+    notes: "Existing production Worker. Not part of the Brenda OS deploy set.",
+  },
+  {
+    name: "bookdeskops-staging",
+    role: "staging",
+    notes: "Staging counterpart to bookdeskops.",
+  },
+  {
+    name: "tennis-hq",
+    role: "app",
+    notes: "Existing application Worker. Keep separate from brenda-os-* names.",
+  },
+  {
+    name: "bet-ticker-worker",
+    role: "app",
+    notes: "Existing application Worker.",
+  },
+  {
+    name: "fantasy402-ingestion",
+    role: "ingestion",
+    notes: "Existing ingestion Worker.",
+  },
+  {
+    name: "factory-wager-r2",
+    role: "storage",
+    notes: "Existing R2-backed Worker.",
+  },
 ] as const;
 
 export type CompanySkill = (typeof SKILLS)[number];
+export type GlossaryEntry = (typeof GLOSSARY)[number];
+export type EstateWorker = (typeof ESTATE)[number];
 
 export function listSkillSummaries() {
   return SKILLS.map(({ id, title, summary }) => ({ id, title, summary }));
@@ -127,4 +216,42 @@ export function listSkillSummaries() {
 
 export function getSkillById(id: string): CompanySkill | null {
   return SKILLS.find((skill) => skill.id === id) ?? null;
+}
+
+export function listGlossaryEntries() {
+  return GLOSSARY.map((entry) => ({ ...entry }));
+}
+
+export function getGlossaryEntry(term: string): GlossaryEntry | null {
+  const needle = term.trim().toLowerCase();
+  return GLOSSARY.find((entry) => entry.term.toLowerCase() === needle) ?? null;
+}
+
+export function listEstateWorkers() {
+  return ESTATE.map((entry) => ({ ...entry }));
+}
+
+export function getEstateWorker(name: string): EstateWorker | null {
+  return ESTATE.find((entry) => entry.name === name) ?? null;
+}
+
+/** Discovery index for Gatekeeper.getAgentCatalog(). Skills first so they survive the clamp. */
+export function buildCompanyCatalogEntries() {
+  return [
+    ...SKILLS.map((skill) => ({
+      id: `skill:${skill.id}`,
+      title: skill.title,
+      description: skill.summary,
+    })),
+    ...GLOSSARY.map((entry) => ({
+      id: `glossary:${entry.term}`,
+      title: entry.term,
+      description: entry.meaning,
+    })),
+    ...ESTATE.map((entry) => ({
+      id: `estate:${entry.name}`,
+      title: entry.name,
+      description: `${entry.role} — ${entry.notes}`,
+    })),
+  ];
 }
