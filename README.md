@@ -46,6 +46,7 @@ There is no `developers.cloudflare.com/cloudflare-os` product doc yet. Use these
 | Core (do not patch) | https://github.com/cloudflare/cloudflare-os |
 | Official starter (this repo is seeded from) | https://github.com/cloudflare/cloudflare-os-starter |
 | How this deployment is built | [docs/architecture.md](docs/architecture.md) |
+| Kernel map (Overseer, Gatekeepers, HITL writes) | [docs/kernel.md](docs/kernel.md) |
 | Starter customization | [docs/customization.md](docs/customization.md) |
 | Observability | [docs/observability.md](docs/observability.md) |
 | Migrate from hosted deploy | [docs/migrate-from-hosted.md](docs/migrate-from-hosted.md) |
@@ -125,6 +126,7 @@ Leave resource IDs as `null` to let Wrangler provision KV and R2 on first deploy
 - Open the router hostname and confirm Access is the only public way in.
 - Open `/admin` as an administrator and set Context, Scheduler, and Custom Gatekeepers to disabled, optional, or enabled.
 - Enable the Custom Gatekeeper, ask for deployment information, and confirm the read appears as an observation.
+- Ask the agent to file an operator note, then list notes — the new note should already be visible.
 - Ask an agent to schedule something a few minutes out to exercise the Scheduler Gatekeeper.
 
 ## Run locally (no Cloudflare account)
