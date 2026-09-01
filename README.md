@@ -140,7 +140,7 @@ This is for trying the product, not production. Data is stored under `cloudflare
 
 ## Deploy status for this checkout
 
-`deployment.jsonc` still has placeholders (`<CLOUDFLARE_ACCOUNT_ID>`, Worker names, Access issuer/audience, admin email). **Do not run `pnpm deploy` until those are filled and `wrangler login` succeeds.**
+`deployment.jsonc` still has placeholders (`<CLOUDFLARE_ACCOUNT_ID>`, Worker names, Access issuer/audience, admin email). **Do not run `pnpm deploy` until those are filled and `wrangler login` succeeds.** The full remaining-steps list is in [DEPLOY.md](DEPLOY.md).
 
 Production deploy also needs a Cloudflare account with Workers, KV, R2, Browser Rendering, Dynamic Worker Loaders, Workers AI, and AI Gateway.
 
