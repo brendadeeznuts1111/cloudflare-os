@@ -90,6 +90,8 @@ git submodule update --init
 # If that fails because the gitlink is missing on a fresh seed:
 #   git submodule add https://github.com/cloudflare/cloudflare-os.git cloudflare-os
 #   git -C cloudflare-os checkout 6478a1448a11524e2f7c2575ad66fab0bc47c433
+# Restore lockfile + generated wrangler types from the official starter
+bash scripts/sync-upstream-generated.sh
 pnpm install
 pnpm --dir cloudflare-os install
 pnpm exec wrangler login
@@ -101,9 +103,9 @@ Your account needs [Workers](https://developers.cloudflare.com/workers/), [KV](h
 
 This starter deploys [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) mode. See [Sign-in methods](docs/customization.md#sign-in-methods) for alternatives.
 
-1. Choose a public hostname in an [active Cloudflare zone](https://developers.cloudflare.com/dns/zone-setups/), such as `os.example.com`.
-2. Create a [self-hosted Access application](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) for that hostname.
-3. Copy its [application audience tag](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/#get-your-aud-tag).
+1. Choose a public hostname in an active Cloudflare zone, such as `os.example.com`.
+2. Create a self-hosted Access application for that hostname.
+3. Copy its application audience tag.
 4. Open [`deployment.jsonc`](deployment.jsonc) and replace the placeholders.
 
 For an evaluation without a zone, switch the router route to `{ "workersDev": true }` and set `publicBaseUrl` to the resulting origin (for example `https://<router-name>.<account>.workers.dev`).
@@ -156,13 +158,13 @@ Fastest hosted path (no repo): [os.cloudflare.app/deploy](https://os.cloudflare.
 | Organization APIs and capabilities | [`packages/custom-gatekeeper`](packages/custom-gatekeeper/README.md) | Yes |
 | Product behavior unavailable through Worker boundaries | Pinned upstream fork/commit | Yes |
 
-The complete control reference lives in [Customization](docs/customization.md). The upstream [`write-gatekeeper` skill](https://github.com/cloudflare/cloudflare-os/blob/main/.agents/skills/write-gatekeeper/SKILL.md) covers richer integrations.
+The complete control reference lives in [Customization](docs/customization.md). The upstream write-gatekeeper skill covers richer integrations.
 
 ## Operations and upgrades
 
-- Stream production events with [`wrangler tail`](https://developers.cloudflare.com/workers/observability/logs/real-time-logs/).
+- Stream production events with wrangler tail.
 - Triage explicit failures with the [observability guide](docs/observability.md).
-- Roll a Worker back from its dashboard history or [`wrangler rollback`](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/).
+- Roll a Worker back from its dashboard history or wrangler rollback.
 - Follow the [upgrade checklist](docs/customization.md#upgrade) before changing the pinned submodule.
 
 ## License
