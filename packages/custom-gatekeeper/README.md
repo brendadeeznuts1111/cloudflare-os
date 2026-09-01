@@ -1,6 +1,13 @@
 # Custom Gatekeeper
 
-This is a credential-free, read-only example for deployment-owned Cloudflare OS integrations. It exposes deployment information through a typed singleton and records every read as an observation.
+This is a credential-free, read-only Gatekeeper for this Brenda OS deployment. It exposes company context — topology, official docs, and operating skills — through a typed singleton and records every read as an observation.
+
+Agent-facing API (`CustomSession`):
+
+- `getDeploymentInfo()` — name and guidance from `deployment.jsonc`
+- `getTopology()` — Worker names, pinned core SHA, remaining deploy blockers
+- `listOfficialDocs()` — official Cloudflare OS and platform documentation
+- `listSkills()` / `getSkill(id)` — curated skills in `src/company-os.ts`
 
 ## Adapt it
 

@@ -18,8 +18,16 @@ import type {
   SupportedResource,
   VendorDescription,
 } from "@gadgets/workshop-shared/gatekeeper";
-import type { CustomDeploymentInfo, CustomSession } from "./types.js";
+import type { CompanySkill, CustomDeploymentInfo, CustomSession, DeploymentTopology, OfficialDoc } from "./types.js";
 import TYPES_CODE from "./types-code.js";
+import {
+  DEPLOY_BLOCKERS,
+  OFFICIAL_DOCS,
+  PINNED_CORE_SHA,
+  WORKERS,
+  getSkillById,
+  listSkillSummaries,
+} from "./company-os.js";
 
 const CUSTOM_ICON = {
   url:
@@ -73,6 +81,46 @@ export class CustomSessionImpl extends RpcTarget implements CustomSession {
     return this.#info;
   }
 
+  async getTopology(): Promise<DeploymentTopology> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read Brenda OS topology",
+      description: "Read Worker names, the pinned core commit, and remaining deploy blockers.",
+    });
+    return {
+      name: this.#info.name,
+      message: this.#info.message,
+      pinnedCoreSha: PINNED_CORE_SHA,
+      route: "workers.dev",
+      workers: WORKERS.map((worker) => ({ ...worker })),
+      deployBlockers: [...DEPLOY_BLOCKERS],
+    };
+  }
+
+  async listOfficialDocs(): Promise<OfficialDoc[]> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read official documentation map",
+      description: "Read the official Cloudflare OS and platform documentation list.",
+    });
+    return OFFICIAL_DOCS.map((doc) => ({ ...doc }));
+  }
+
+  async listSkills(): Promise<Array<Pick<CompanySkill, "id" | "title" | "summary">>> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "List company skills",
+      description: "List curated operating skills for this Brenda OS deployment.",
+    });
+    return listSkillSummaries();
+  }
+
+  async getSkill(id: string): Promise<CompanySkill | null> {
+    await this.#approvalQueue.authorizeObservation({
+      title: "Read company skill",
+      description: `Read the operating skill "${id}"`,
+    });
+    const skill = getSkillById(id);
+    return skill ? { ...skill, steps: [...skill.steps] } : null;
+  }
+
   [Symbol.dispose](): void {
     this.#approvalQueue[Symbol.dispose]?.();
   }
@@ -84,7 +132,7 @@ export class CustomGatekeeper extends DurableObject<Cloudflare.Env> implements G
     return {
       url: "custom://deployment-info",
       title: "Deployment information",
-      snippet: "Organization-specific information supplied by this deployment.",
+      snippet: "Brenda OS topology, official docs, and operating skills for this deployment.",
       suggestedBindingName: "CUSTOM",
       tsType: "CustomSession",
     };
