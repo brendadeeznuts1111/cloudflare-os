@@ -115,7 +115,7 @@ export class CustomSessionImpl extends RpcTarget implements CustomSession {
   async getSkill(id: string): Promise<CompanySkill | null> {
     await this.#approvalQueue.authorizeObservation({
       title: "Read company skill",
-      description: `Read the operating skill "${id}"`,
+      description: `Read the operating skill "${id}".`,
     });
     const skill = getSkillById(id);
     return skill ? { ...skill, steps: [...skill.steps] } : null;
