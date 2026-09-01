@@ -34,13 +34,13 @@ type ObservationQueue = Pick<ApprovalQueue, "authorizeObservation"> &
 
 export function describeCustomVendor(): VendorDescription {
   return {
-    displayName: "Custom Gatekeeper",
-    url: "https://github.com/cloudflare/cloudflare-os-starter",
+    displayName: "Brenda OS",
+    url: "https://github.com/brendadeeznuts1111/cloudflare-os",
     logo: CUSTOM_ICON,
     color: "#e8f2ff",
-    tagline: "Example organization-specific capability",
+    tagline: "Personal Cloudflare OS deployment",
     description:
-      "A minimal Gatekeeper to copy when connecting CloudflareOS to your organization's systems.",
+      "Example Gatekeeper for the brendadeeznuts1111 Cloudflare OS instance. Replace this with your organization's systems.",
     autoProvisionsAccount: true,
     providesAuth: false,
   };
@@ -48,7 +48,7 @@ export function describeCustomVendor(): VendorDescription {
 
 export function describeCustomAccount(): AccountDescription {
   return {
-    displayName: "Custom Gatekeeper",
+    displayName: "Brenda OS",
     avatar: CUSTOM_ICON,
     singleton: { tsType: "CustomSession" },
   };

@@ -15,8 +15,8 @@
     }
   ],
   "vars": {
-    "CUSTOM_NAME": "Example organization",
-    "CUSTOM_MESSAGE": "Replace this with information useful to your organization."
+    "CUSTOM_NAME": "Brenda OS",
+    "CUSTOM_MESSAGE": "Personal Cloudflare OS deployment for brendadeeznuts1111."
   },
   "observability": {
     "enabled": true,
