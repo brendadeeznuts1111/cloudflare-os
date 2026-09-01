@@ -103,12 +103,12 @@ Your account needs [Workers](https://developers.cloudflare.com/workers/), [KV](h
 
 This starter deploys [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) mode. See [Sign-in methods](docs/customization.md#sign-in-methods) for alternatives.
 
-1. Choose a public hostname in an active Cloudflare zone, such as `os.example.com`.
-2. Create a self-hosted Access application for that hostname.
-3. Copy its application audience tag.
+1. Choose a public hostname in an [active Cloudflare zone](https://developers.cloudflare.com/dns/zone-setups/), such as `os.example.com`.
+2. Create a [self-hosted Access application](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) for that hostname.
+3. Copy its [application audience tag](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/#get-your-aud-tag).
 4. Open [`deployment.jsonc`](deployment.jsonc) and replace the placeholders.
 
-For an evaluation without a zone, switch the router route to `{ "workersDev": true }` and set `publicBaseUrl` to the resulting origin (for example `https://<router-name>.<account>.workers.dev`).
+The router is already on `{ "workersDev": true }`. Set `publicBaseUrl` to the resulting origin (for example `https://brenda-os-router.<account>.workers.dev`).
 
 ### 3. Validate and deploy
 
@@ -142,7 +142,7 @@ This is for trying the product, not production. Data is stored under `cloudflare
 
 ## Deploy status for this checkout
 
-`deployment.jsonc` still has placeholders (`<CLOUDFLARE_ACCOUNT_ID>`, Worker names, Access issuer/audience, admin email). **Do not run `pnpm deploy` until those are filled and `wrangler login` succeeds.** The full remaining-steps list is in [DEPLOY.md](DEPLOY.md).
+Worker names (`brenda-os-*`), a `workers.dev` evaluation route, and Custom Gatekeeper branding are filled. Still required before `pnpm deploy`: `accountId`, `publicBaseUrl`, Access issuer/audience/admin email, and `wrangler login`. The full remaining-steps list is in [DEPLOY.md](DEPLOY.md).
 
 Production deploy also needs a Cloudflare account with Workers, KV, R2, Browser Rendering, Dynamic Worker Loaders, Workers AI, and AI Gateway.
 
@@ -158,13 +158,13 @@ Fastest hosted path (no repo): [os.cloudflare.app/deploy](https://os.cloudflare.
 | Organization APIs and capabilities | [`packages/custom-gatekeeper`](packages/custom-gatekeeper/README.md) | Yes |
 | Product behavior unavailable through Worker boundaries | Pinned upstream fork/commit | Yes |
 
-The complete control reference lives in [Customization](docs/customization.md). The upstream write-gatekeeper skill covers richer integrations.
+The complete control reference lives in [Customization](docs/customization.md). The upstream [`write-gatekeeper` skill](https://github.com/cloudflare/cloudflare-os/blob/main/.agents/skills/write-gatekeeper/SKILL.md) covers richer integrations.
 
 ## Operations and upgrades
 
-- Stream production events with wrangler tail.
+- Stream production events with [`wrangler tail`](https://developers.cloudflare.com/workers/observability/logs/real-time-logs/).
 - Triage explicit failures with the [observability guide](docs/observability.md).
-- Roll a Worker back from its dashboard history or wrangler rollback.
+- Roll a Worker back from its dashboard history or [`wrangler rollback`](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/).
 - Follow the [upgrade checklist](docs/customization.md#upgrade) before changing the pinned submodule.
 
 ## License
